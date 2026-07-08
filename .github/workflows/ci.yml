@@ -22,8 +22,8 @@ jobs:
         with:
           node-version: 20
       - run: cargo install pipechecker
-      - run: pipechecker -s --no-pinning .github/workflows/ci.yml
-      - run: pipechecker -s --no-pinning .github/workflows/release.yml
+      - run: pipechecker --no-pinning .github/workflows/ci.yml
+      - run: pipechecker --no-pinning .github/workflows/release.yml
 
   rust:
     runs-on: ubuntu-latest

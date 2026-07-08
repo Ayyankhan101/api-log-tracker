@@ -26,7 +26,9 @@ struct AnalysisCache {
 
 impl AnalysisCache {
     fn new() -> Self {
-        Self { inner: Mutex::new(HashMap::new()) }
+        Self {
+            inner: Mutex::new(HashMap::new()),
+        }
     }
 
     fn get(&self, key: &str) -> Option<CachedResult> {
@@ -136,7 +138,10 @@ pub async fn analyze_logs(csv_path: &Path) -> Result<String> {
 
     // Check cache
     if let Some(cached) = CACHE.get(&cache_key) {
-        return Ok(format!("{} [cached, provider={}]", cached.text, cached.provider));
+        return Ok(format!(
+            "{} [cached, provider={}]",
+            cached.text, cached.provider
+        ));
     }
 
     let (provider_name, provider_impl) = provider::resolve_provider()?;
@@ -144,18 +149,23 @@ pub async fn analyze_logs(csv_path: &Path) -> Result<String> {
     let model_override = std::env::var("LLM_MODEL").ok();
     let model_ref = model_override.as_deref();
 
-    let text = provider_impl.analyze(&prompt, "", model_ref).await
+    let text = provider_impl
+        .analyze(&prompt, "", model_ref)
+        .await
         .with_context(|| format!("analysis failed with provider {provider_name}"))?;
 
     let model_name = model_override.unwrap_or_else(|| provider_impl.default_model().to_string());
 
     // Store in cache
-    CACHE.insert(cache_key, CachedResult {
-        text: text.clone(),
-        provider: provider_name.to_string(),
-        model: model_name,
-        created_at: Instant::now(),
-    });
+    CACHE.insert(
+        cache_key,
+        CachedResult {
+            text: text.clone(),
+            provider: provider_name.to_string(),
+            model: model_name,
+            created_at: Instant::now(),
+        },
+    );
 
     Ok(text)
 }
@@ -168,7 +178,11 @@ pub async fn analyze_logs_with(
 ) -> Result<(String, String, String)> {
     let entries = read_entries(csv_path)?;
     if entries.is_empty() {
-        return Ok(("No log entries found yet — nothing to analyze.".to_string(), "none".to_string(), "none".to_string()));
+        return Ok((
+            "No log entries found yet — nothing to analyze.".to_string(),
+            "none".to_string(),
+            "none".to_string(),
+        ));
     }
 
     let stats = compute_stats(&entries);
@@ -191,12 +205,15 @@ pub async fn analyze_logs_with(
     let model_name = model.unwrap_or(provider_impl.default_model()).to_string();
     let provider_name_str = pname.to_string();
 
-    CACHE.insert(cache_key, CachedResult {
-        text: text.clone(),
-        provider: provider_name_str.clone(),
-        model: model_name.clone(),
-        created_at: Instant::now(),
-    });
+    CACHE.insert(
+        cache_key,
+        CachedResult {
+            text: text.clone(),
+            provider: provider_name_str.clone(),
+            model: model_name.clone(),
+            created_at: Instant::now(),
+        },
+    );
 
     Ok((text, provider_name_str, model_name))
 }
