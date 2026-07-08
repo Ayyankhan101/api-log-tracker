@@ -6,6 +6,7 @@ description = "API log tracker with multi-provider LLM anomaly analysis, HTTP da
 license = "MIT"
 repository = "https://github.com/Ayyankhan101/api-log-tracker"
 homepage = "https://github.com/Ayyankhan101/api-log-tracker"
+readme = "README.md"
 
 [[bin]]
 name = "api_log_tracker"

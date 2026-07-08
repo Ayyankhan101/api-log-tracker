@@ -102,6 +102,9 @@ jobs:
         run: npm install
         working-directory: my-terminal-ui
 
+      - name: Copy README for npm
+        run: cp README.md my-terminal-ui/README.md
+
       - name: Build TUI
         run: npm run build
         working-directory: my-terminal-ui
@@ -111,9 +114,6 @@ jobs:
         working-directory: my-terminal-ui
         env:
           NODE_AUTH_TOKEN: ${{ secrets.NPM_TOKEN }}
-
-      - name: Copy README for npm
-        run: cp README.md my-terminal-ui/README.md
 
       - name: Create GitHub Release
         uses: softprops/action-gh-release@v2
