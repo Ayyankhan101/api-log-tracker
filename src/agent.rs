@@ -193,8 +193,7 @@ pub async fn analyze_logs_with(
     }
 
     let (pname, provider_impl) = if let Some(name) = provider_name {
-        let providers = provider::resolve_named_provider(name)?;
-        providers
+        provider::resolve_named_provider(name)?
     } else {
         provider::resolve_provider()?
     };

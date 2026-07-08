@@ -219,7 +219,7 @@ async fn get_logs(
             .map(|r| {
                 r.deserialize::<LogEntry>()
                     .filter_map(|r| r.ok())
-                    .filter(|e| source_filter.map_or(true, |s| e.source == s))
+                    .filter(|e| source_filter.is_none_or(|s| e.source == s))
                     .take(limit)
                     .collect::<Vec<_>>()
             })

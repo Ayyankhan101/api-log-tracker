@@ -19,6 +19,7 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         source: &str,
         method: &str,
