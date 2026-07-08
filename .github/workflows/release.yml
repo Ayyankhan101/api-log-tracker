@@ -50,7 +50,7 @@ jobs:
           cache-dependency-path: my-terminal-ui/package-lock.json
 
       - name: Install TUI deps
-        run: npm ci
+        run: npm install
         working-directory: my-terminal-ui
 
       - name: Build TUI
