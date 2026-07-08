@@ -8,6 +8,7 @@ on:
 jobs:
   release:
     runs-on: ubuntu-latest
+    timeout-minutes: 30
     permissions:
       contents: write
     steps:
@@ -20,10 +21,13 @@ jobs:
         run: echo "VERSION=${GITHUB_REF#refs/tags/v}" >> "$GITHUB_OUTPUT"
 
       - name: Update Cargo.toml version
-        run: sed -i '0,/^version = .*$/s/^version = .*$/version = "${{ steps.version.outputs.VERSION }}"/' Cargo.toml
+        run: |
+          sed -i '0,/^version = .*$/s/^version = .*$/version = "${{ steps.version.outputs.VERSION }}"/' Cargo.toml
 
       - name: Update package.json version
-        run: cd my-terminal-ui && sed -i "s/\"version\": \".*\"/\"version\": \"${{ steps.version.outputs.VERSION }}\"/" package.json
+        run: |
+          cd my-terminal-ui
+          sed -i 's/"version": ".*"/"version": "${{ steps.version.outputs.VERSION }}"/' package.json
 
       - name: Setup Rust
         uses: actions-rust-lang/setup-rust-toolchain@v1
