@@ -1,6 +1,6 @@
 {
-	"name": "my-terminal-ui",
-	"version": "0.0.0",
+	"name": "api-log-tracker-tui",
+	"version": "0.1.0",
 	"license": "MIT",
 	"bin": "dist/cli.js",
 	"type": "module",
