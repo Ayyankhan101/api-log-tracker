@@ -1,0 +1,30 @@
+services:
+  - type: web
+    name: api-log-tracker
+    runtime: docker
+    dockerfilePath: Dockerfile
+    envVars:
+      - key: LLM_PROVIDER
+        sync: false
+      - key: OPENAI_API_KEY
+        sync: false
+      - key: ANTHROPIC_API_KEY
+        sync: false
+      - key: GEMINI_API_KEY
+        sync: false
+      - key: XAI_API_KEY
+        sync: false
+      - key: GROQ_API_KEY
+        sync: false
+      - key: DEEPSEEK_API_KEY
+        sync: false
+      - key: DASHSCOPE_API_KEY
+        sync: false
+      - key: ZHIPU_API_KEY
+        sync: false
+      - key: BAIDU_API_KEY
+        sync: false
+      - key: BAIDU_API_SECRET
+        sync: false
+    healthCheckPath: /api/health
+    autoDeploy: true

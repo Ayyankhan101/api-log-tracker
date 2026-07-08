@@ -1,0 +1,24 @@
+# Rust
+target/
+Cargo.lock
+
+# Node (TUI)
+my-terminal-ui/node_modules/
+my-terminal-ui/dist/
+
+# Environment
+.env
+.env.local
+
+# Logs (CSV data)
+logs/*.csv
+
+# OS
+.DS_Store
+Thumbs.db
+
+# IDE
+.vscode/
+.idea/
+*.swp
+*.swo
