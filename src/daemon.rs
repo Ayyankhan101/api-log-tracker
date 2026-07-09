@@ -10,7 +10,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tower_http::cors::{Any, CorsLayer};
 
 // ── Request / Response types ─────────────────────────────────────────────────
@@ -75,10 +75,36 @@ pub struct LogEntryResponse {
 
 // ── State ────────────────────────────────────────────────────────────────────
 
+const MAX_CSV_SIZE: u64 = 100 * 1024 * 1024; // 100 MB
+const MAX_ROTATED_FILES: usize = 3;
+
 #[derive(Clone)]
 struct DaemonState {
     logger: ApiLogger,
     csv_path: PathBuf,
+}
+
+fn rotate_csv_if_needed(csv_path: &Path) {
+    let meta = match std::fs::metadata(csv_path) {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+    if meta.len() < MAX_CSV_SIZE {
+        return;
+    }
+
+    // Shift rotated files: .3 -> delete, .2 -> .3, .1 -> .2, current -> .1
+    for i in (1..=MAX_ROTATED_FILES).rev() {
+        let prev = csv_path.with_extension(format!("csv.{}", i));
+        if i == MAX_ROTATED_FILES {
+            let _ = std::fs::remove_file(&prev);
+        } else {
+            let next = csv_path.with_extension(format!("csv.{}", i + 1));
+            let _ = std::fs::rename(&prev, &next);
+        }
+    }
+    let rotated = csv_path.with_extension("csv.1");
+    let _ = std::fs::rename(csv_path, &rotated);
 }
 
 // ── Main entry ───────────────────────────────────────────────────────────────
@@ -184,6 +210,8 @@ async fn post_log(
         eprintln!("[daemon] failed to write log: {e}");
         return (StatusCode::INTERNAL_SERVER_ERROR, "write failed");
     }
+
+    rotate_csv_if_needed(&state.csv_path);
 
     (StatusCode::CREATED, "ok")
 }

@@ -1,6 +1,7 @@
 import React, {useState} from 'react';
 import {Box, Text, useInput} from 'ink';
 import type {LogEntry} from '../types.js';
+import {theme} from './theme.js';
 
 type Props = {
 	entries: LogEntry[];
@@ -25,58 +26,66 @@ export default function LiveLogs({entries}: Props) {
 	const visible = sorted.slice(scrollOffset, scrollOffset + visibleCount);
 	const maxScroll = Math.max(0, sorted.length - visibleCount);
 
-	useInput(input => {
+	useInput((input, key) => {
 		if (input === 'f') {
 			setFilter(filter === 'all' ? 'server' : filter === 'server' ? 'client' : 'all');
 			setScrollOffset(0);
+		}
+
+		if (key.upArrow) {
+			setScrollOffset(offset => Math.min(offset + 1, maxScroll));
+		}
+
+		if (key.downArrow) {
+			setScrollOffset(offset => Math.max(offset - 1, 0));
 		}
 	});
 
 	return (
 		<Box flexDirection="column" gap={0}>
 			<Box gap={1} marginBottom={1}>
-				<Text color="green">{'╔═ LIVE LOGS '}</Text>
-				<Text color="gray">{`[${sorted.length} entries]`}</Text>
-				<Text color="green">{' ═'}</Text>
-				<Text color="gray">{' filter: '}</Text>
-				<Text bold color="green">{filter}</Text>
-				<Text color="gray">{' (f) '}</Text>
+				<Text color={theme.primary}>{`╔═ LIVE LOGS `}</Text>
+				<Text color={theme.dim}>{`[${sorted.length} entries]`}</Text>
+				<Text color={theme.primary}>{' ═'}</Text>
+				<Text color={theme.dim}>{' filter: '}</Text>
+				<Text bold color={theme.primary}>{filter}</Text>
+				<Text color={theme.dim}>{' (f) '}</Text>
 				{maxScroll > 0 && (
-					<Text color="gray">{`scroll [${scrollOffset + 1}-${Math.min(scrollOffset + visibleCount, sorted.length)}/${sorted.length}]`}</Text>
+					<Text color={theme.dim}>{`scroll [${scrollOffset + 1}-${Math.min(scrollOffset + visibleCount, sorted.length)}/${sorted.length}]`}</Text>
 				)}
-				<Text color="green">{'═'.repeat(20)}</Text>
+				<Text color={theme.primary}>{theme.borderH.repeat(20)}</Text>
 			</Box>
 
 			<Box flexDirection="row" gap={0} marginLeft={1}>
-				<Text bold color="green">{'  TIME     '}</Text>
-				<Text bold color="green">{'SRC      '}</Text>
-				<Text bold color="green">{'METHOD   '}</Text>
-				<Text bold color="green">{'ENDPOINT                          '}</Text>
-				<Text bold color="green">{'STS   '}</Text>
-				<Text bold color="green">{'LATENCY'}</Text>
+				<Text bold color={theme.primary}>{'  TIME     '}</Text>
+				<Text bold color={theme.primary}>{'SRC      '}</Text>
+				<Text bold color={theme.primary}>{'METHOD   '}</Text>
+				<Text bold color={theme.primary}>{'ENDPOINT                          '}</Text>
+				<Text bold color={theme.primary}>{'STS   '}</Text>
+				<Text bold color={theme.primary}>{'LATENCY'}</Text>
 			</Box>
-			<Text color="green">{'  ─'.repeat(42)}</Text>
+			<Text color={theme.primary}>{'  ─'.repeat(42)}</Text>
 
 			{visible.length === 0 && (
-				<Text color="gray" italic>{'  No data. Waiting for signal...'}</Text>
+				<Text color={theme.dim} italic>{'  No data. Waiting for signal...'}</Text>
 			)}
 
 			{visible.map((entry, i) => {
-				const methodColor = entry.method === 'GET' ? 'green' : entry.method === 'POST' ? 'yellow' : 'cyan';
-				const statusColor = entry.status_code < 300 ? 'green' : entry.status_code < 500 ? 'yellow' : 'red';
-				const latencyColor = entry.latency_ms < 100 ? 'green' : entry.latency_ms < 500 ? 'yellow' : 'red';
+				const methodColor = entry.method === 'GET' ? theme.primary : entry.method === 'POST' ? theme.warn : theme.accent;
+				const statusColor = entry.status_code < 300 ? theme.primary : entry.status_code < 500 ? theme.warn : theme.error;
+				const latencyColor = entry.latency_ms < 100 ? theme.primary : entry.latency_ms < 500 ? theme.warn : theme.error;
 
 				return (
 					<Box key={`${entry.id}-${i}`} gap={0} marginLeft={1}>
-						<Text color="green">{'> '}</Text>
-						<Text color="gray">{formatTimestamp(entry.timestamp).padEnd(10)}</Text>
-						<Text color={entry.source === 'server' ? 'green' : 'gray'}>
+						<Text color={theme.primary}>{'> '}</Text>
+						<Text color={theme.dim}>{formatTimestamp(entry.timestamp).padEnd(10)}</Text>
+						<Text color={entry.source === 'server' ? theme.primary : theme.dim}>
 							{entry.source.padEnd(8)}
 						</Text>
 						<Text color={methodColor}>
 							{entry.method.padEnd(8)}
 						</Text>
-						<Text color="white">
+						<Text color={theme.bright}>
 							{entry.endpoint.padEnd(40).slice(0, 40)}
 						</Text>
 						<Text color={statusColor}>[{entry.status_code}]</Text>
@@ -87,7 +96,7 @@ export default function LiveLogs({entries}: Props) {
 
 			{sorted.length > visibleCount && (
 				<Box marginTop={1}>
-					<Text color="gray" dimColor>{'  ↑↓ to scroll'}</Text>
+					<Text color={theme.dim} dimColor>{'  ↑↓ to scroll'}</Text>
 				</Box>
 			)}
 		</Box>

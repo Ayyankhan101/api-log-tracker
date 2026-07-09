@@ -1,6 +1,6 @@
 {
 	"name": "api-log-tracker-tui",
-	"version": "0.1.0",
+	"version": "0.1.1",
 	"license": "MIT",
 	"bin": "dist/cli.js",
 	"type": "module",
@@ -10,8 +10,7 @@
 	"scripts": {
 		"build": "tsc",
 		"dev": "tsc --watch",
-		"test": "prettier --check . && xo && vitest run",
-		"test:ava": "vitest run"
+		"test": "vitest run"
 	},
 	"files": [
 		"dist"
@@ -25,24 +24,9 @@
 	"devDependencies": {
 		"@sindresorhus/tsconfig": "^3.0.1",
 		"@types/react": "^18.3.31",
-		"@vdemedes/prettier-config": "^2.0.1",
-		"chalk": "^5.2.0",
-		"eslint-config-xo-react": "^0.27.0",
-		"eslint-plugin-react": "^7.32.2",
-		"eslint-plugin-react-hooks": "^4.6.0",
 		"ink-testing-library": "^4.0.0",
-		"prettier": "^2.8.7",
 		"tsx": "^4.23.0",
 		"typescript": "^5.9.3",
-		"vitest": "^4.1.10",
-		"xo": "^0.53.1"
-	},
-	"xo": {
-		"extends": "xo-react",
-		"prettier": true,
-		"rules": {
-			"react/prop-types": "off"
-		}
-	},
-	"prettier": "@vdemedes/prettier-config"
+		"vitest": "^4.1.10"
+	}
 }

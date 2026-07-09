@@ -437,3 +437,72 @@ pub fn resolve_provider() -> Result<(&'static str, Box<dyn LlmProvider>)> {
         ALL_PROVIDER_NAMES.join(", ")
     )
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn resolve_named_provider_openai() {
+        let result = resolve_named_provider("openai");
+        assert!(result.is_ok());
+        let (name, provider) = result.unwrap();
+        assert_eq!(name, "openai");
+        assert_eq!(provider.name(), "openai");
+        assert_eq!(provider.default_model(), "gpt-4o");
+    }
+
+    #[test]
+    fn resolve_named_provider_anthropic() {
+        let result = resolve_named_provider("anthropic");
+        assert!(result.is_ok());
+        let (_, provider) = result.unwrap();
+        assert_eq!(provider.default_model(), "claude-sonnet-4-5-20250929");
+    }
+
+    #[test]
+    fn resolve_named_provider_unknown() {
+        let result = resolve_named_provider("nonexistent");
+        assert!(result.is_err());
+        let err = result.err().unwrap().to_string();
+        assert!(err.contains("nonexistent"));
+        assert!(err.contains("Supported"));
+    }
+
+    #[test]
+    fn resolve_named_provider_case_insensitive() {
+        let result = resolve_named_provider("OpenAI");
+        assert!(result.is_ok());
+    }
+
+    #[test]
+    fn all_providers_have_valid_names() {
+        for name in ALL_PROVIDER_NAMES {
+            let result = resolve_named_provider(name);
+            assert!(result.is_ok(), "provider '{name}' should resolve");
+            let (resolved_name, _) = result.unwrap();
+            assert_eq!(resolved_name, *name);
+        }
+    }
+
+    #[test]
+    fn provider_env_keys_count() {
+        let keys = provider_env_keys();
+        assert_eq!(keys.len(), 12);
+    }
+
+    #[test]
+    fn make_provider_returns_some_for_all_names() {
+        for name in ALL_PROVIDER_NAMES {
+            assert!(
+                make_provider(name).is_some(),
+                "make_provider('{name}') returned None"
+            );
+        }
+    }
+
+    #[test]
+    fn make_provider_returns_none_for_unknown() {
+        assert!(make_provider("nope").is_none());
+    }
+}

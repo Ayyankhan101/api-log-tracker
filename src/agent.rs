@@ -222,3 +222,69 @@ pub fn get_stats(csv_path: &Path) -> Result<Stats> {
     let entries = read_entries(csv_path)?;
     Ok(compute_stats(&entries))
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::LogEntry;
+
+    fn make_entry(endpoint: &str, status: u16, latency: u64, error: Option<&str>) -> LogEntry {
+        LogEntry::new(
+            "server",
+            "GET",
+            endpoint,
+            status,
+            latency,
+            0,
+            0,
+            error.map(String::from),
+        )
+    }
+
+    #[test]
+    fn compute_stats_empty() {
+        let stats = compute_stats(&[]);
+        assert_eq!(stats.total, 0);
+        assert_eq!(stats.errors, 0);
+        assert_eq!(stats.avg_latency_ms, 0.0);
+        assert_eq!(stats.max_latency_ms, 0);
+    }
+
+    #[test]
+    fn compute_stats_basic() {
+        let entries = vec![
+            make_entry("/a", 200, 100, None),
+            make_entry("/a", 200, 200, None),
+            make_entry("/b", 500, 300, Some("err")),
+        ];
+        let stats = compute_stats(&entries);
+        assert_eq!(stats.total, 3);
+        assert_eq!(stats.errors, 1);
+        assert_eq!(stats.max_latency_ms, 300);
+        assert!((stats.avg_latency_ms - 200.0).abs() < 0.01);
+        assert_eq!(*stats.by_endpoint.get("/a").unwrap(), 2);
+        assert_eq!(*stats.by_endpoint.get("/b").unwrap(), 1);
+        assert_eq!(*stats.by_status.get(&200).unwrap(), 2);
+        assert_eq!(*stats.by_status.get(&500).unwrap(), 1);
+    }
+
+    #[test]
+    fn error_rate_calculation() {
+        let entries = vec![
+            make_entry("/", 200, 10, None),
+            make_entry("/", 200, 10, None),
+            make_entry("/", 200, 10, None),
+            make_entry("/", 200, 10, None),
+            make_entry("/", 500, 10, Some("err")),
+        ];
+        let stats = compute_stats(&entries);
+        let rate = stats.error_rate();
+        assert!((rate - 20.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn error_rate_zero_entries() {
+        let stats = compute_stats(&[]);
+        assert_eq!(stats.error_rate(), 0.0);
+    }
+}
