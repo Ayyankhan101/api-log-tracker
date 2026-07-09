@@ -123,10 +123,99 @@ pub async fn check_and_report(current: &Stats, config: &WebhookConfig) -> Result
     let status = resp.status();
     if !status.is_success() {
         let body = resp.text().await.unwrap_or_default();
-        eprintln!("[webhook] error {status}: {body}");
+        tracing::error!(status = %status, body = %body, "webhook error");
     } else {
-        println!("[webhook] anomaly report sent to {}", config.url);
+        tracing::info!(url = %config.url, "anomaly report sent");
     }
 
     Ok(())
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn stats_error_rate_zero_entries() {
+        let stats = Stats {
+            total: 0,
+            errors: 0,
+            avg_latency_ms: 0.0,
+            max_latency_ms: 0,
+            by_endpoint: HashMap::new(),
+            by_status: HashMap::new(),
+        };
+        assert_eq!(stats.error_rate(), 0.0);
+    }
+
+    #[test]
+    fn stats_error_rate_calculation() {
+        let stats = Stats {
+            total: 100,
+            errors: 25,
+            avg_latency_ms: 150.0,
+            max_latency_ms: 2000,
+            by_endpoint: HashMap::new(),
+            by_status: HashMap::new(),
+        };
+        assert!((stats.error_rate() - 25.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn stats_error_rate_all_errors() {
+        let stats = Stats {
+            total: 50,
+            errors: 50,
+            avg_latency_ms: 500.0,
+            max_latency_ms: 5000,
+            by_endpoint: HashMap::new(),
+            by_status: HashMap::new(),
+        };
+        assert!((stats.error_rate() - 100.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn check_and_report_skips_when_below_min_entries() {
+        let stats = Stats {
+            total: 3,
+            errors: 3,
+            avg_latency_ms: 100.0,
+            max_latency_ms: 500,
+            by_endpoint: HashMap::new(),
+            by_status: HashMap::new(),
+        };
+        let config = WebhookConfig {
+            url: "http://localhost:9999/hook".to_string(),
+            error_threshold: 5.0,
+            min_entries: 10,
+        };
+        // Should return Ok without sending (below min_entries)
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let result = check_and_report(&stats, &config).await;
+            assert!(result.is_ok());
+        });
+    }
+
+    #[test]
+    fn check_and_report_skips_when_below_threshold() {
+        let stats = Stats {
+            total: 20,
+            errors: 0,
+            avg_latency_ms: 50.0,
+            max_latency_ms: 200,
+            by_endpoint: HashMap::new(),
+            by_status: HashMap::new(),
+        };
+        let config = WebhookConfig {
+            url: "http://localhost:9999/hook".to_string(),
+            error_threshold: 5.0,
+            min_entries: 10,
+        };
+        let rt = tokio::runtime::Runtime::new().unwrap();
+        rt.block_on(async {
+            let result = check_and_report(&stats, &config).await;
+            assert!(result.is_ok());
+        });
+    }
 }

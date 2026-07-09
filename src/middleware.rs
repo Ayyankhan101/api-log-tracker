@@ -62,7 +62,7 @@ pub async fn log_requests(
     let logger = logger.clone();
     tokio::spawn(async move {
         if let Err(e) = logger.log(&entry).await {
-            eprintln!("[api_log_tracker] failed to write log: {e}");
+            tracing::error!(error = %e, "failed to write log");
         }
     });
 

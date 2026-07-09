@@ -69,9 +69,21 @@ impl LoggedClient {
         );
 
         if let Err(e) = self.logger.log(&entry).await {
-            eprintln!("[api_log_tracker] failed to write log: {e}");
+            tracing::error!(error = %e, "failed to write log");
         }
 
         Ok(result?)
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn logged_client_creation() {
+        let logger = ApiLogger::new("/tmp/test_client.csv");
+        let client = LoggedClient::new(logger);
+        assert!(client.client.get("https://example.com").build().is_ok());
     }
 }

@@ -3,10 +3,18 @@ use axum::{routing::get, Router};
 use std::env;
 use std::path::PathBuf;
 
+const VERSION: &str = env!("CARGO_PKG_VERSION");
 const LOG_PATH: &str = "logs/api_logs.csv";
 
 #[tokio::main]
 async fn main() -> anyhow::Result<()> {
+    tracing_subscriber::fmt()
+        .with_env_filter(
+            tracing_subscriber::EnvFilter::try_from_default_env()
+                .unwrap_or_else(|_| tracing_subscriber::EnvFilter::new("info")),
+        )
+        .init();
+
     let args: Vec<String> = env::args().collect();
     let mode = args.get(1).map(|s| s.as_str()).unwrap_or("serve");
 
@@ -19,8 +27,16 @@ async fn main() -> anyhow::Result<()> {
             let webhook = parse_flag(&args, "--webhook");
             api_log_tracker::start_daemon(port, webhook).await?;
         }
-        _ => {
+        "help" | "--help" | "-h" => {
             print_usage();
+        }
+        "--version" | "-v" => {
+            println!("api_log_tracker v{VERSION}");
+        }
+        _ => {
+            eprintln!("Unknown command: {mode}");
+            eprintln!("Run 'api_log_tracker help' for usage.");
+            std::process::exit(1);
         }
     }
 
@@ -28,39 +44,35 @@ async fn main() -> anyhow::Result<()> {
 }
 
 fn print_usage() {
-    eprintln!("Usage: api_log_tracker <command> [options]");
-    eprintln!();
-    eprintln!("Commands:");
-    eprintln!("  serve                   Start axum server on :3000 with logging middleware");
-    eprintln!("  demo-client             Make example calls through LoggedClient");
-    eprintln!("  analyze [options]       Run LLM analysis on logs/api_logs.csv");
-    eprintln!("  daemon [port]           Start HTTP daemon (default port 8080)");
-    eprintln!();
-    eprintln!("analyze options:");
-    eprintln!("  --provider <name>       LLM provider (openai|anthropic|gemini|grok|groq|deepseek|qwen|baichuan|yi|stepfun|glm|ernie)");
-    eprintln!("  --model <name>          Override default model for the provider");
-    eprintln!();
-    eprintln!("daemon options:");
-    eprintln!("  [port]                  Port to listen on (default 8080)");
-    eprintln!("  --webhook <url>         Webhook URL for anomaly reports");
-    eprintln!();
-    eprintln!("Environment variables:");
-    eprintln!("  LLM_PROVIDER            Provider to use for analysis");
-    eprintln!("  LLM_MODEL               Override default model");
-    eprintln!("  OPENAI_API_KEY          OpenAI API key");
-    eprintln!("  ANTHROPIC_API_KEY       Anthropic API key");
-    eprintln!("  GEMINI_API_KEY          Google Gemini API key");
-    eprintln!("  XAI_API_KEY             xAI Grok API key");
-    eprintln!("  GROQ_API_KEY            Groq API key");
-    eprintln!("  DEEPSEEK_API_KEY        DeepSeek API key");
-    eprintln!("  DASHSCOPE_API_KEY       Qwen (Aliyun) API key");
-    eprintln!("  BAICHUAN_API_KEY        Baichuan API key");
-    eprintln!("  YI_API_KEY              Yi API key");
-    eprintln!("  STEPFUN_API_KEY         StepFun API key");
-    eprintln!("  ZHIPU_API_KEY           Zhipu GLM API key (format: id.secret)");
-    eprintln!("  BAIDU_API_KEY           Baidu ERNIE client_id");
-    eprintln!("  BAIDU_API_SECRET        Baidu ERNIE client_secret");
-    eprintln!("  API_LOGGER_CSV          CSV log path (default: logs/api_logs.csv)");
+    println!("api_log_tracker v{VERSION}");
+    println!("API log tracker with multi-provider LLM anomaly analysis");
+    println!();
+    println!("USAGE:");
+    println!("  api_log_tracker <command> [options]");
+    println!();
+    println!("COMMANDS:");
+    println!("  serve               Start axum server on :3000 with logging middleware");
+    println!("  demo-client         Make example calls through LoggedClient");
+    println!("  analyze [options]   Run LLM analysis on logs/api_logs.csv");
+    println!("  daemon [port]       Start HTTP daemon (default port 8080)");
+    println!("  help                Show this help message");
+    println!();
+    println!("OPTIONS:");
+    println!("  --provider <name>   LLM provider (openai|anthropic|gemini|grok|groq|deepseek|qwen|baichuan|yi|stepfun|glm|ernie)");
+    println!("  --model <name>      Override default model for the provider");
+    println!("  --webhook <url>     Webhook URL for anomaly reports");
+    println!("  --port <port>       Daemon listen port (default 8080)");
+    println!();
+    println!("ENVIRONMENT:");
+    println!("  LLM_PROVIDER            Provider to use for analysis");
+    println!("  LLM_MODEL               Override default model");
+    println!("  RUST_LOG                Log level filter (default: info)");
+    println!("  API_LOGGER_CSV          CSV log path (default: logs/api_logs.csv)");
+    println!();
+    println!("API KEYS:");
+    println!("  OPENAI_API_KEY, ANTHROPIC_API_KEY, GEMINI_API_KEY, XAI_API_KEY,");
+    println!("  GROQ_API_KEY, DEEPSEEK_API_KEY, DASHSCOPE_API_KEY, BAICHUAN_API_KEY,");
+    println!("  YI_API_KEY, STEPFUN_API_KEY, ZHIPU_API_KEY, BAIDU_API_KEY, BAIDU_API_SECRET");
 }
 
 fn parse_flag(args: &[String], flag: &str) -> Option<String> {

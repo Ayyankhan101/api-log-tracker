@@ -50,7 +50,7 @@ function Header({entries, serverStatus}: {entries: LogEntry[]; serverStatus: Ser
 	return (
 		<Box flexDirection="column" marginBottom={1}>
 			<Text color={theme.primary}>
-				{`┌─[api-log-tracker]─[v0.1]${theme.borderH.repeat(36)}┐`}
+				{`┌─[api-log-tracker]─[v0.1.2]${theme.borderH.repeat(34)}┐`}
 			</Text>
 			<Text color={theme.primary}>
 				{`${theme.borderV}  ${theme.cursor}`}
@@ -89,6 +89,7 @@ export default function App({csvPath}: Props) {
 	const [entries, setEntries] = useState<LogEntry[]>([]);
 	const [serverStatus, setServerStatus] = useState<ServerStatus>('stopped');
 	const [analysisResult, setAnalysisResult] = useState<AnalysisResult>({status: 'idle', output: '', error: null});
+	const [showHelp, setShowHelp] = useState(false);
 
 	useEffect(() => {
 		const watcher = createCsvWatcher(csvPath, {
@@ -118,12 +119,56 @@ export default function App({csvPath}: Props) {
 			exit();
 		}
 
+		if (input === '?') {
+			setShowHelp(prev => !prev);
+			return;
+		}
+
+		if (showHelp) {
+			setShowHelp(false);
+			return;
+		}
+
 		if (input === '1') setActiveTab('dashboard');
 		if (input === '2') setActiveTab('logs');
 		if (input === '3') setActiveTab('analysis');
 		if (input === '4') setActiveTab('controls');
 		if (input === '5') setActiveTab('integration');
 	});
+
+	if (showHelp) {
+		return (
+			<Box flexDirection="column" padding={1}>
+				<Text color={theme.primary} bold>{'╔═ KEYBOARD SHORTCUTS ════════════════════════════════════╗'}</Text>
+				<Text color={theme.primary}>{'║'}</Text>
+				<Text color={theme.primary}>{'║  GLOBAL'}</Text>
+				<Text color={theme.primary}>{'║'}</Text>
+				<Text color={theme.dim}>{'║    1-5        '}</Text><Text>Switch tabs</Text>
+				<Text color={theme.dim}>{'║    q / Ctrl+C '}</Text><Text>Quit</Text>
+				<Text color={theme.dim}>{'║    ?          '}</Text><Text>Toggle this help</Text>
+				<Text color={theme.primary}>{'║'}</Text>
+				<Text color={theme.primary}>{'║  DASHBOARD (tab 1)'}</Text>
+				<Text color={theme.dim}>{'║    (auto-updates from CSV)'}</Text>
+				<Text color={theme.primary}>{'║'}</Text>
+				<Text color={theme.primary}>{'║  LIVE LOGS (tab 2)'}</Text>
+				<Text color={theme.dim}>{'║    f          '}</Text><Text>Filter: all → server → client</Text>
+				<Text color={theme.dim}>{'║    ↑ / ↓     '}</Text><Text>Scroll entries</Text>
+				<Text color={theme.primary}>{'║'}</Text>
+				<Text color={theme.primary}>{'║  ANALYSIS (tab 3)'}</Text>
+				<Text color={theme.dim}>{'║    j / k      '}</Text><Text>Switch provider</Text>
+				<Text color={theme.dim}>{'║    r          '}</Text><Text>Run analysis</Text>
+				<Text color={theme.primary}>{'║'}</Text>
+				<Text color={theme.primary}>{'║  SERVER CONTROLS (tab 4)'}</Text>
+				<Text color={theme.dim}>{'║    s          '}</Text><Text>Start daemon</Text>
+				<Text color={theme.dim}>{'║    k          '}</Text><Text>Stop daemon</Text>
+				<Text color={theme.dim}>{'║    d          '}</Text><Text>Run demo client</Text>
+				<Text color={theme.dim}>{'║    c          '}</Text><Text>Clear output</Text>
+				<Text color={theme.primary}>{'║'}</Text>
+				<Text color={theme.primary}>{'╚═════════════════════════════════════════════════════════╝'}</Text>
+				<Text color={theme.dim} italic>{'  Press any key to close'}</Text>
+			</Box>
+		);
+	}
 
 	return (
 		<Box flexDirection="column" height="100%">
@@ -133,7 +178,7 @@ export default function App({csvPath}: Props) {
 				<Tabs active={activeTab} />
 			</Box>
 
-			<Box flexDirection="column" flexGrow={1}>
+			<Box key={activeTab} flexDirection="column" flexGrow={1}>
 				{activeTab === 'dashboard' && <Dashboard stats={stats} />}
 				{activeTab === 'logs' && <LiveLogs entries={entries} />}
 			{activeTab === 'analysis' && (
