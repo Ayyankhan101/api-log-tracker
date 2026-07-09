@@ -295,7 +295,7 @@ fn make_provider(name: &str) -> Option<Box<dyn LlmProvider>> {
         })),
         "groq" => Some(Box::new(OpenAiCompatProvider {
             name: "groq",
-            base_url: "https://api.groq.com/open",
+            base_url: "https://api.groq.com/openai",
             default_model: "llama-3.3-70b-versatile",
         })),
         "deepseek" => Some(Box::new(OpenAiCompatProvider {
