@@ -11,10 +11,7 @@ fn test_app() -> Router {
 
     let logger = api_log_tracker::ApiLogger::new(&csv_path);
 
-    let state = DaemonState {
-        logger,
-        csv_path,
-    };
+    let state = DaemonState { logger, csv_path };
 
     Router::new()
         .route("/api", axum::routing::get(daemon::api_index))
@@ -35,7 +32,9 @@ async fn health_returns_ok() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["status"], "ok");
 }
@@ -43,15 +42,14 @@ async fn health_returns_ok() {
 #[tokio::test]
 async fn api_index_returns_endpoints() {
     let app = test_app();
-    let req = Request::builder()
-        .uri("/api")
-        .body(Body::empty())
-        .unwrap();
+    let req = Request::builder().uri("/api").body(Body::empty()).unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json["service"], "api_log_tracker");
     assert!(json["endpoints"].is_object());
@@ -90,7 +88,9 @@ async fn get_logs_returns_empty_when_no_data() {
     let resp = app.oneshot(req).await.unwrap();
     assert_eq!(resp.status(), StatusCode::OK);
 
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert!(json.as_array().unwrap().is_empty());
 }
@@ -127,7 +127,9 @@ async fn get_logs_with_limit() {
         .unwrap();
 
     let resp = app.oneshot(req).await.unwrap();
-    let body = axum::body::to_bytes(resp.into_body(), usize::MAX).await.unwrap();
+    let body = axum::body::to_bytes(resp.into_body(), usize::MAX)
+        .await
+        .unwrap();
     let json: serde_json::Value = serde_json::from_slice(&body).unwrap();
     assert_eq!(json.as_array().unwrap().len(), 2);
 }
