@@ -79,9 +79,9 @@ const MAX_CSV_SIZE: u64 = 100 * 1024 * 1024; // 100 MB
 const MAX_ROTATED_FILES: usize = 3;
 
 #[derive(Clone)]
-struct DaemonState {
-    logger: ApiLogger,
-    csv_path: PathBuf,
+pub struct DaemonState {
+    pub logger: ApiLogger,
+    pub csv_path: PathBuf,
 }
 
 fn rotate_csv_if_needed(csv_path: &Path) {
@@ -127,6 +127,7 @@ pub async fn start_daemon(port: u16, webhook_url: Option<String>) -> anyhow::Res
         .allow_headers(Any);
 
     let app = Router::new()
+        .route("/api", get(api_index))
         .route("/api/log", post(post_log))
         .route("/api/health", get(health))
         .route("/api/logs", get(get_logs))
@@ -135,14 +136,7 @@ pub async fn start_daemon(port: u16, webhook_url: Option<String>) -> anyhow::Res
         .with_state(state);
 
     let addr = SocketAddr::from(([0, 0, 0, 0], port));
-    println!("╔══════════════════════════════════════════════════════════╗");
-    println!("║  api_log_tracker daemon running on http://{addr:<34}║");
-    println!("║  POST /api/log     — log an API call                   ║");
-    println!("║  GET  /api/health  — check status                      ║");
-    println!("║  GET  /api/logs    — query stored logs                 ║");
-    println!("║  POST /api/analyze — trigger LLM analysis              ║");
-    println!("╚══════════════════════════════════════════════════════════╝");
-    println!("CSV: {csv_path_str}");
+    tracing::info!("daemon listening on {addr}");
 
     // Webhook loop
     let webhook_handle = if let Some(url) = webhook_url {
@@ -164,10 +158,10 @@ pub async fn start_daemon(port: u16, webhook_url: Option<String>) -> anyhow::Res
                 match agent::get_stats(&csv) {
                     Ok(stats) => {
                         if let Err(e) = webhook::check_and_report(&stats, &config).await {
-                            eprintln!("[webhook] error: {e}");
+                            tracing::error!(error = %e, "webhook error");
                         }
                     }
-                    Err(e) => eprintln!("[webhook] stats error: {e}"),
+                    Err(e) => tracing::error!(error = %e, "webhook stats error"),
                 }
             }
         }))
@@ -176,18 +170,59 @@ pub async fn start_daemon(port: u16, webhook_url: Option<String>) -> anyhow::Res
     };
 
     let listener = tokio::net::TcpListener::bind(addr).await?;
-    axum::serve(listener, app).await?;
+    let server = axum::serve(listener, app).with_graceful_shutdown(shutdown_signal());
+
+    if let Err(e) = server.await {
+        tracing::error!(error = %e, "server error");
+    }
 
     if let Some(handle) = webhook_handle {
         handle.abort();
     }
 
+    tracing::info!("daemon shut down");
     Ok(())
+}
+
+async fn shutdown_signal() {
+    let ctrl_c = tokio::signal::ctrl_c();
+    #[cfg(unix)]
+    let terminate = async {
+        tokio::signal::unix::signal(tokio::signal::unix::SignalKind::terminate())
+            .expect("failed to install SIGTERM handler")
+            .recv()
+            .await;
+    };
+    #[cfg(not(unix))]
+    let terminate = std::future::pending::<()>();
+
+    tokio::select! {
+        _ = ctrl_c => {
+            tracing::info!("received SIGINT, shutting down");
+        }
+        _ = terminate => {
+            tracing::info!("received SIGTERM, shutting down");
+        }
+    }
 }
 
 // ── Handlers ─────────────────────────────────────────────────────────────────
 
-async fn post_log(
+pub async fn api_index() -> axum::Json<serde_json::Value> {
+    axum::Json(serde_json::json!({
+        "service": "api_log_tracker",
+        "version": env!("CARGO_PKG_VERSION"),
+        "endpoints": {
+            "POST /api/log": "Submit an API log entry",
+            "GET  /api/logs": "Retrieve recent log entries (?limit=N&source=client|server)",
+            "GET  /api/health": "Health check",
+            "POST /api/analyze": "Analyze logs with LLM anomaly detection",
+            "GET  /api": "This endpoint — API discovery",
+        },
+    }))
+}
+
+pub async fn post_log(
     State(state): State<DaemonState>,
     Json(req): Json<LogRequest>,
 ) -> (StatusCode, &'static str) {
@@ -207,7 +242,7 @@ async fn post_log(
     };
 
     if let Err(e) = state.logger.log(&entry).await {
-        eprintln!("[daemon] failed to write log: {e}");
+        tracing::error!(error = %e, "failed to write log");
         return (StatusCode::INTERNAL_SERVER_ERROR, "write failed");
     }
 
@@ -216,7 +251,7 @@ async fn post_log(
     (StatusCode::CREATED, "ok")
 }
 
-async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
+pub async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
     let total_entries = if state.csv_path.exists() {
         std::fs::read_to_string(&state.csv_path)
             .map(|c| c.lines().count().saturating_sub(1))
@@ -234,7 +269,7 @@ async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
     })
 }
 
-async fn get_logs(
+pub async fn get_logs(
     State(state): State<DaemonState>,
     Query(params): Query<LogQuery>,
 ) -> Json<Vec<LogEntryResponse>> {

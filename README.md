@@ -3,6 +3,7 @@
 [![CI](https://github.com/Ayyankhan101/api-log-tracker/actions/workflows/ci.yml/badge.svg)](https://github.com/Ayyankhan101/api-log-tracker/actions/workflows/ci.yml)
 [![Crates.io](https://img.shields.io/crates/v/api_log_tracker)](https://crates.io/crates/api_log_tracker)
 [![npm](https://img.shields.io/npm/v/api-log-tracker-tui)](https://www.npmjs.com/package/api-log-tracker-tui)
+[![Release](https://img.shields.io/github/v/release/Ayyankhan101/api-log-tracker)](https://github.com/Ayyankhan101/api-log-tracker/releases)
 
 Real-time API traffic logging + multi-provider LLM analysis + TUI dashboard + webhook reporting.
 
