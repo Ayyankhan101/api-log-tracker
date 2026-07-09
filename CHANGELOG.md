@@ -7,6 +7,18 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.3] - 2026-07-09
+
+### Added
+- Google Sheets real-time export via `gsheets-exporter` (watchdog + gspread)
+- `LoggedClient` Python httpx wrapper for outgoing HTTP request logging
+- `ApiLoggerMiddleware` — drop-in FastAPI/Starlette middleware for Python services
+- VisaARX integration: API logging daemon + Google Sheets sync in Docker Compose
+- CSV rotation handling in gsheets-exporter (detects file recreation)
+
+### Changed
+- Version bumped from 0.1.2 to 0.1.3
+
 ## [0.1.2] - 2026-07-09
 
 ### Added
