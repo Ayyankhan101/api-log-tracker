@@ -178,7 +178,7 @@ export default function App({csvPath}: Props) {
 				<Tabs active={activeTab} />
 			</Box>
 
-			<Box flexDirection="column" flexGrow={1}>
+			<Box key={activeTab} flexDirection="column" flexGrow={1}>
 				{activeTab === 'dashboard' && <Dashboard stats={stats} />}
 				{activeTab === 'logs' && <LiveLogs entries={entries} />}
 			{activeTab === 'analysis' && (
