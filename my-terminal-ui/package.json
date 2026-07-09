@@ -23,6 +23,7 @@
 	},
 	"devDependencies": {
 		"@sindresorhus/tsconfig": "^3.0.1",
+		"@types/node": "^26.1.1",
 		"@types/react": "^18.3.31",
 		"ink-testing-library": "^4.0.0",
 		"tsx": "^4.23.0",
