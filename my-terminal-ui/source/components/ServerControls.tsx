@@ -2,6 +2,7 @@ import React, {useEffect, useState} from 'react';
 import {Box, Text, useInput} from 'ink';
 import type {ServerStatus} from '../types.js';
 import {startServer, runDemoClient} from '../rust-bridge.js';
+import {theme} from './theme.js';
 
 type Props = {
 	serverStatus: ServerStatus;
@@ -82,44 +83,44 @@ export default function ServerControls({serverStatus, onStatusChange}: Props) {
 	});
 
 	const statusColor =
-		serverStatus === 'running' ? 'green' : serverStatus === 'starting' ? 'yellow' : serverStatus === 'error' ? 'red' : 'gray';
+		serverStatus === 'running' ? theme.primary : serverStatus === 'starting' ? theme.warn : serverStatus === 'error' ? theme.error : theme.dim;
 	const statusIcon = serverStatus === 'running' ? '●' : serverStatus === 'starting' ? '◌' : '○';
 
 	return (
 		<Box flexDirection="column" gap={1}>
 			<Box gap={0}>
-				<Text color="green">{'╔═ SERVER CONTROLS ════════════════════════════════════════╗'}</Text>
+				<Text color={theme.primary}>{`╔═ SERVER CONTROLS ${theme.borderH.repeat(42)}╗`}</Text>
 			</Box>
 
 			<Box gap={0} marginLeft={1}>
-				<Text color="green">{'║  '}</Text>
-				<Text color="gray">{'STATUS: '}</Text>
+				<Text color={theme.primary}>{theme.borderV}  </Text>
+				<Text color={theme.dim}>{'STATUS: '}</Text>
 				<Text color={statusColor} bold>{statusIcon} [{serverStatus.toUpperCase()}]</Text>
-				<Text color="green">{'                                       '}</Text>
-				<Text color="green">{'║'}</Text>
+				<Text color={theme.primary}>{'                                       '}</Text>
+				<Text color={theme.primary}>{theme.borderV}</Text>
 			</Box>
 
 			<Box flexDirection="column" gap={0} marginLeft={1} marginTop={1}>
 				{serverStatus === 'stopped' && (
-					<Text color="green">{'  '}[s] start server</Text>
+					<Text color={theme.primary}>{'  '}[s] start server</Text>
 				)}
 				{(serverStatus === 'running' || serverStatus === 'starting') && (
-					<Text color="red">{'  '}[k] stop server</Text>
+					<Text color={theme.error}>{'  '}[k] stop server</Text>
 				)}
 				{serverStatus === 'running' && (
-					<Text color="green">{'  '}[d] run demo client</Text>
+					<Text color={theme.primary}>{'  '}[d] run demo client</Text>
 				)}
-				<Text color="gray">{'  '}[c] clear output</Text>
+				<Text color={theme.dim}>{'  '}[c] clear output</Text>
 			</Box>
 
 			{logs.length > 0 && (
-				<Box flexDirection="column" gap={0} marginTop={1} marginLeft={1} borderStyle="single" borderColor="green" paddingX={1} height={15}>
+				<Box flexDirection="column" gap={0} marginTop={1} marginLeft={1} borderStyle="single" borderColor={theme.primary} paddingX={1} height={15}>
 					{logs.slice(-12).map((line, i) => (
-						<Text key={i} color={line.startsWith('$') ? 'green' : 'gray'}>
+						<Text key={i} color={line.startsWith('$') ? theme.primary : theme.dim}>
 							{line}
 						</Text>
 					))}
-					<Text color="green">{'$ █'}</Text>
+					<Text color={theme.primary}>{theme.prompt} {theme.cursor}</Text>
 				</Box>
 			)}
 		</Box>

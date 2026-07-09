@@ -30,7 +30,8 @@ impl LoggedClient {
     }
 
     pub async fn query(&self, url: &str, body: &Value) -> Result<Response> {
-        self.request(Method::from_bytes(b"QUERY")?, url, Some(body.clone())).await
+        self.request(Method::from_bytes(b"QUERY")?, url, Some(body.clone()))
+            .await
     }
 
     async fn request(&self, method: Method, url: &str, body: Option<Value>) -> Result<Response> {
@@ -50,9 +51,7 @@ impl LoggedClient {
 
         let (status_code, response_size, error) = match &result {
             Ok(resp) => {
-                let size = resp
-                    .content_length()
-                    .unwrap_or(0) as usize;
+                let size = resp.content_length().unwrap_or(0) as usize;
                 (resp.status().as_u16(), size, None)
             }
             Err(e) => (0, 0, Some(e.to_string())),

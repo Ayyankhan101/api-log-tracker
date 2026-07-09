@@ -26,7 +26,9 @@ struct AnalysisCache {
 
 impl AnalysisCache {
     fn new() -> Self {
-        Self { inner: Mutex::new(HashMap::new()) }
+        Self {
+            inner: Mutex::new(HashMap::new()),
+        }
     }
 
     fn get(&self, key: &str) -> Option<CachedResult> {
@@ -136,7 +138,10 @@ pub async fn analyze_logs(csv_path: &Path) -> Result<String> {
 
     // Check cache
     if let Some(cached) = CACHE.get(&cache_key) {
-        return Ok(format!("{} [cached, provider={}]", cached.text, cached.provider));
+        return Ok(format!(
+            "{} [cached, provider={}]",
+            cached.text, cached.provider
+        ));
     }
 
     let (provider_name, provider_impl) = provider::resolve_provider()?;
@@ -144,18 +149,23 @@ pub async fn analyze_logs(csv_path: &Path) -> Result<String> {
     let model_override = std::env::var("LLM_MODEL").ok();
     let model_ref = model_override.as_deref();
 
-    let text = provider_impl.analyze(&prompt, "", model_ref).await
+    let text = provider_impl
+        .analyze(&prompt, "", model_ref)
+        .await
         .with_context(|| format!("analysis failed with provider {provider_name}"))?;
 
     let model_name = model_override.unwrap_or_else(|| provider_impl.default_model().to_string());
 
     // Store in cache
-    CACHE.insert(cache_key, CachedResult {
-        text: text.clone(),
-        provider: provider_name.to_string(),
-        model: model_name,
-        created_at: Instant::now(),
-    });
+    CACHE.insert(
+        cache_key,
+        CachedResult {
+            text: text.clone(),
+            provider: provider_name.to_string(),
+            model: model_name,
+            created_at: Instant::now(),
+        },
+    );
 
     Ok(text)
 }
@@ -168,7 +178,11 @@ pub async fn analyze_logs_with(
 ) -> Result<(String, String, String)> {
     let entries = read_entries(csv_path)?;
     if entries.is_empty() {
-        return Ok(("No log entries found yet — nothing to analyze.".to_string(), "none".to_string(), "none".to_string()));
+        return Ok((
+            "No log entries found yet — nothing to analyze.".to_string(),
+            "none".to_string(),
+            "none".to_string(),
+        ));
     }
 
     let stats = compute_stats(&entries);
@@ -179,8 +193,7 @@ pub async fn analyze_logs_with(
     }
 
     let (pname, provider_impl) = if let Some(name) = provider_name {
-        let providers = provider::resolve_named_provider(name)?;
-        providers
+        provider::resolve_named_provider(name)?
     } else {
         provider::resolve_provider()?
     };
@@ -191,12 +204,15 @@ pub async fn analyze_logs_with(
     let model_name = model.unwrap_or(provider_impl.default_model()).to_string();
     let provider_name_str = pname.to_string();
 
-    CACHE.insert(cache_key, CachedResult {
-        text: text.clone(),
-        provider: provider_name_str.clone(),
-        model: model_name.clone(),
-        created_at: Instant::now(),
-    });
+    CACHE.insert(
+        cache_key,
+        CachedResult {
+            text: text.clone(),
+            provider: provider_name_str.clone(),
+            model: model_name.clone(),
+            created_at: Instant::now(),
+        },
+    );
 
     Ok((text, provider_name_str, model_name))
 }
@@ -205,4 +221,70 @@ pub async fn analyze_logs_with(
 pub fn get_stats(csv_path: &Path) -> Result<Stats> {
     let entries = read_entries(csv_path)?;
     Ok(compute_stats(&entries))
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::LogEntry;
+
+    fn make_entry(endpoint: &str, status: u16, latency: u64, error: Option<&str>) -> LogEntry {
+        LogEntry::new(
+            "server",
+            "GET",
+            endpoint,
+            status,
+            latency,
+            0,
+            0,
+            error.map(String::from),
+        )
+    }
+
+    #[test]
+    fn compute_stats_empty() {
+        let stats = compute_stats(&[]);
+        assert_eq!(stats.total, 0);
+        assert_eq!(stats.errors, 0);
+        assert_eq!(stats.avg_latency_ms, 0.0);
+        assert_eq!(stats.max_latency_ms, 0);
+    }
+
+    #[test]
+    fn compute_stats_basic() {
+        let entries = vec![
+            make_entry("/a", 200, 100, None),
+            make_entry("/a", 200, 200, None),
+            make_entry("/b", 500, 300, Some("err")),
+        ];
+        let stats = compute_stats(&entries);
+        assert_eq!(stats.total, 3);
+        assert_eq!(stats.errors, 1);
+        assert_eq!(stats.max_latency_ms, 300);
+        assert!((stats.avg_latency_ms - 200.0).abs() < 0.01);
+        assert_eq!(*stats.by_endpoint.get("/a").unwrap(), 2);
+        assert_eq!(*stats.by_endpoint.get("/b").unwrap(), 1);
+        assert_eq!(*stats.by_status.get(&200).unwrap(), 2);
+        assert_eq!(*stats.by_status.get(&500).unwrap(), 1);
+    }
+
+    #[test]
+    fn error_rate_calculation() {
+        let entries = vec![
+            make_entry("/", 200, 10, None),
+            make_entry("/", 200, 10, None),
+            make_entry("/", 200, 10, None),
+            make_entry("/", 200, 10, None),
+            make_entry("/", 500, 10, Some("err")),
+        ];
+        let stats = compute_stats(&entries);
+        let rate = stats.error_rate();
+        assert!((rate - 20.0).abs() < 0.01);
+    }
+
+    #[test]
+    fn error_rate_zero_entries() {
+        let stats = compute_stats(&[]);
+        assert_eq!(stats.error_rate(), 0.0);
+    }
 }

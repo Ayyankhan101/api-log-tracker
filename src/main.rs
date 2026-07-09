@@ -64,9 +64,7 @@ fn print_usage() {
 }
 
 fn parse_flag(args: &[String], flag: &str) -> Option<String> {
-    args.windows(2)
-        .find(|w| w[0] == flag)
-        .map(|w| w[1].clone())
+    args.windows(2).find(|w| w[0] == flag).map(|w| w[1].clone())
 }
 
 /// Starts a small axum server with the logging middleware attached.

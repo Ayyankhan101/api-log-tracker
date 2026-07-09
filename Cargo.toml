@@ -1,7 +1,12 @@
 [package]
 name = "api_log_tracker"
-version = "0.1.0"
+version = "0.1.1"
 edition = "2021"
+description = "API log tracker with multi-provider LLM anomaly analysis, HTTP daemon, and TUI dashboard"
+license = "MIT"
+repository = "https://github.com/Ayyankhan101/api-log-tracker"
+homepage = "https://github.com/Ayyankhan101/api-log-tracker"
+readme = "README.md"
 
 [[bin]]
 name = "api_log_tracker"

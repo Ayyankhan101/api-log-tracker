@@ -1,5 +1,6 @@
 import React, {useState} from 'react';
 import {Box, Text, useInput} from 'ink';
+import {theme} from './theme.js';
 
 const LANGUAGES = [
 	{id: 'python', label: 'Python'},
@@ -194,51 +195,51 @@ export default function Integration() {
 	return (
 		<Box flexDirection="column" gap={1}>
 			<Box gap={0}>
-				<Text color="green">{'╔═ INTEGRATION SNIPPETS ═══════════════════════════════════╗'}</Text>
+				<Text color={theme.primary}>{`╔═ INTEGRATION SNIPPETS ${theme.borderH.repeat(40)}╗`}</Text>
 			</Box>
 
 			<Box gap={1} marginLeft={1}>
-				<Text color="gray">{'  '}</Text>
+				<Text color={theme.dim}>{'  '}</Text>
 				{LANGUAGES.map((lang, i) => (
 					<Text key={lang.id}>
 						{i === selectedIdx ? (
-							<Text bold color="green">{`[${lang.label}]`}</Text>
+							<Text bold color={theme.primary}>{`[${lang.label}]`}</Text>
 						) : (
-							<Text color="gray">{` ${lang.label} `}</Text>
+							<Text color={theme.dim}>{` ${lang.label} `}</Text>
 						)}
-						{i < LANGUAGES.length - 1 && <Text color="green">{' │ '}</Text>}
+						{i < LANGUAGES.length - 1 && <Text color={theme.primary}>{' │ '}</Text>}
 					</Text>
 				))}
-				<Text color="gray">{'  (j/k to navigate)'}</Text>
+				<Text color={theme.dim}>{'  (j/k to navigate)'}</Text>
 			</Box>
 
-			<Box marginLeft={1} marginTop={1} borderStyle="single" borderColor="green" paddingX={1}>
-				<Text color="green">
+			<Box marginLeft={1} marginTop={1} borderStyle="single" borderColor={theme.primary} paddingX={1}>
+				<Text color={theme.primary}>
 					{` ┌─ ${snippet.title} ─`}
 				</Text>
 			</Box>
 
 			<Box flexDirection="column" marginLeft={2}>
 				{snippet.lines.map((line, i) => (
-					<Text key={i} color={line.startsWith('#') || line.startsWith('//') || line.startsWith('%') ? 'gray' : 'white'}>
+					<Text key={i} color={line.startsWith('#') || line.startsWith('//') || line.startsWith('%') ? theme.dim : theme.bright}>
 						{line}
 					</Text>
 				))}
 			</Box>
 
 			<Box marginLeft={1} marginTop={1}>
-				<Text color="green">{'└'}</Text>
-				<Text color="gray">{'───────────────────────────────────────────────────────'}</Text>
-				<Text color="green">{'┘'}</Text>
+				<Text color={theme.primary}>{'└'}</Text>
+				<Text color={theme.dim}>{'───────────────────────────────────────────────────────'}</Text>
+				<Text color={theme.primary}>{'┘'}</Text>
 			</Box>
 
 			<Box flexDirection="column" gap={0} marginLeft={1} marginTop={1}>
-				<Text color="green">{'  Daemon: cargo run -- daemon'}</Text>
-				<Text color="gray">{'  POST http://localhost:8080/api/log'}</Text>
-				<Text color="gray">{'  POST http://localhost:8080/api/analyze'}</Text>
-				<Text color="gray">{'  GET  http://localhost:8080/api/health'}</Text>
-				<Text color="gray">{'  GET  http://localhost:8080/api/logs?limit=50'}</Text>
-				<Text color="gray">{'  CSV:   logs/api_logs.csv'}</Text>
+				<Text color={theme.primary}>{'  Daemon: cargo run -- daemon'}</Text>
+				<Text color={theme.dim}>{'  POST http://localhost:8080/api/log'}</Text>
+				<Text color={theme.dim}>{'  POST http://localhost:8080/api/analyze'}</Text>
+				<Text color={theme.dim}>{'  GET  http://localhost:8080/api/health'}</Text>
+				<Text color={theme.dim}>{'  GET  http://localhost:8080/api/logs?limit=50'}</Text>
+				<Text color={theme.dim}>{'  CSV:   logs/api_logs.csv'}</Text>
 			</Box>
 		</Box>
 	);

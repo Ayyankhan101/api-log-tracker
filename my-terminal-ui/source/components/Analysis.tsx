@@ -1,4 +1,4 @@
-import React, {useState} from 'react';
+import React, {useRef, useState} from 'react';
 import {Box, Text, useInput} from 'ink';
 import type {AnalysisResult} from '../types.js';
 import {runAnalyze} from '../rust-bridge.js';
@@ -20,14 +20,13 @@ const PROVIDERS = [
 
 type Props = {
 	result: AnalysisResult;
-	apiKey: string;
 	onResult: (result: AnalysisResult) => void;
 };
 
-export default function Analysis({result, apiKey, onResult}: Props) {
+export default function Analysis({result, onResult}: Props) {
 	const [loading, setLoading] = useState(false);
 	const [providerIdx, setProviderIdx] = useState(0);
-	const [outputBuffer, setOutputBuffer] = useState('');
+	const outputRef = useRef('');
 
 	useInput(input => {
 		if (input === 'j' || input === 'ArrowDown') {
@@ -40,23 +39,25 @@ export default function Analysis({result, apiKey, onResult}: Props) {
 
 		if (input === 'r' && !loading) {
 			setLoading(true);
-			setOutputBuffer('');
+			outputRef.current = '';
 			const provider = PROVIDERS[providerIdx]!;
+			const apiKey = process.env[provider.key] || '';
 			onResult({status: 'running', output: '', error: null, provider: provider.id});
 
 			runAnalyze(apiKey, provider.id, {
 				onStdout(data) {
-					setOutputBuffer(prev => prev + data);
+					outputRef.current += data;
 				},
 				onStderr(data) {
-					setOutputBuffer(prev => prev + data);
+					outputRef.current += data;
 				},
 				onExit(code) {
 					setLoading(false);
+					const output = outputRef.current;
 					if (code === 0) {
-						onResult({status: 'done', output: outputBuffer, error: null, provider: provider.id});
+						onResult({status: 'done', output, error: null, provider: provider.id});
 					} else {
-						onResult({status: 'error', output: outputBuffer, error: `Exit code ${code}`, provider: provider.id});
+						onResult({status: 'error', output, error: `Exit code ${code}`, provider: provider.id});
 					}
 				},
 				onError(error) {
@@ -68,6 +69,7 @@ export default function Analysis({result, apiKey, onResult}: Props) {
 	});
 
 	const provider = PROVIDERS[providerIdx]!;
+	const apiKey = process.env[provider.key] || '';
 
 	return (
 		<Box flexDirection="column" gap={1}>

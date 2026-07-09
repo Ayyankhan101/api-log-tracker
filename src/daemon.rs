@@ -10,7 +10,7 @@ use axum::{
 };
 use serde::{Deserialize, Serialize};
 use std::net::SocketAddr;
-use std::path::PathBuf;
+use std::path::{Path, PathBuf};
 use tower_http::cors::{Any, CorsLayer};
 
 // ── Request / Response types ─────────────────────────────────────────────────
@@ -75,16 +75,43 @@ pub struct LogEntryResponse {
 
 // ── State ────────────────────────────────────────────────────────────────────
 
+const MAX_CSV_SIZE: u64 = 100 * 1024 * 1024; // 100 MB
+const MAX_ROTATED_FILES: usize = 3;
+
 #[derive(Clone)]
 struct DaemonState {
     logger: ApiLogger,
     csv_path: PathBuf,
 }
 
+fn rotate_csv_if_needed(csv_path: &Path) {
+    let meta = match std::fs::metadata(csv_path) {
+        Ok(m) => m,
+        Err(_) => return,
+    };
+    if meta.len() < MAX_CSV_SIZE {
+        return;
+    }
+
+    // Shift rotated files: .3 -> delete, .2 -> .3, .1 -> .2, current -> .1
+    for i in (1..=MAX_ROTATED_FILES).rev() {
+        let prev = csv_path.with_extension(format!("csv.{}", i));
+        if i == MAX_ROTATED_FILES {
+            let _ = std::fs::remove_file(&prev);
+        } else {
+            let next = csv_path.with_extension(format!("csv.{}", i + 1));
+            let _ = std::fs::rename(&prev, &next);
+        }
+    }
+    let rotated = csv_path.with_extension("csv.1");
+    let _ = std::fs::rename(csv_path, &rotated);
+}
+
 // ── Main entry ───────────────────────────────────────────────────────────────
 
 pub async fn start_daemon(port: u16, webhook_url: Option<String>) -> anyhow::Result<()> {
-    let csv_path_str = std::env::var("API_LOGGER_CSV").unwrap_or_else(|_| "logs/api_logs.csv".to_string());
+    let csv_path_str =
+        std::env::var("API_LOGGER_CSV").unwrap_or_else(|_| "logs/api_logs.csv".to_string());
     let csv_path = PathBuf::from(&csv_path_str);
     let logger = ApiLogger::new(&csv_path_str);
 
@@ -184,12 +211,12 @@ async fn post_log(
         return (StatusCode::INTERNAL_SERVER_ERROR, "write failed");
     }
 
+    rotate_csv_if_needed(&state.csv_path);
+
     (StatusCode::CREATED, "ok")
 }
 
-async fn health(
-    State(state): State<DaemonState>,
-) -> Json<HealthResponse> {
+async fn health(State(state): State<DaemonState>) -> Json<HealthResponse> {
     let total_entries = if state.csv_path.exists() {
         std::fs::read_to_string(&state.csv_path)
             .map(|c| c.lines().count().saturating_sub(1))
@@ -198,8 +225,7 @@ async fn health(
         0
     };
 
-    let provider_name = std::env::var("LLM_PROVIDER")
-        .unwrap_or_else(|_| "auto-detect".to_string());
+    let provider_name = std::env::var("LLM_PROVIDER").unwrap_or_else(|_| "auto-detect".to_string());
 
     Json(HealthResponse {
         status: "ok".to_string(),
@@ -221,7 +247,7 @@ async fn get_logs(
             .map(|r| {
                 r.deserialize::<LogEntry>()
                     .filter_map(|r| r.ok())
-                    .filter(|e| source_filter.map_or(true, |s| e.source == s))
+                    .filter(|e| source_filter.is_none_or(|s| e.source == s))
                     .take(limit)
                     .collect::<Vec<_>>()
             })
@@ -230,16 +256,21 @@ async fn get_logs(
         vec![]
     };
 
-    Json(entries.into_iter().map(|e| LogEntryResponse {
-        id: e.id,
-        timestamp: e.timestamp,
-        source: e.source,
-        method: e.method,
-        endpoint: e.endpoint,
-        status_code: e.status_code,
-        latency_ms: e.latency_ms,
-        error: e.error,
-    }).collect())
+    Json(
+        entries
+            .into_iter()
+            .map(|e| LogEntryResponse {
+                id: e.id,
+                timestamp: e.timestamp,
+                source: e.source,
+                method: e.method,
+                endpoint: e.endpoint,
+                status_code: e.status_code,
+                latency_ms: e.latency_ms,
+                error: e.error,
+            })
+            .collect(),
+    )
 }
 
 async fn post_analyze(
@@ -254,8 +285,7 @@ async fn post_analyze(
     .await
     .map_err(|e| (StatusCode::INTERNAL_SERVER_ERROR, e.to_string()))?;
 
-    let entries = agent::read_entries(&state.csv_path)
-        .unwrap_or_default();
+    let entries = agent::read_entries(&state.csv_path).unwrap_or_default();
     let stats = agent::compute_stats(&entries);
 
     Ok(Json(AnalyzeResponse {

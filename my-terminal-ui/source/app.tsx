@@ -7,6 +7,7 @@ import Analysis from './components/Analysis.js';
 import ServerControls from './components/ServerControls.js';
 import Integration from './components/Integration.js';
 import {createCsvWatcher} from './csv-watcher.js';
+import {theme} from './components/theme.js';
 import type {LogEntry, TabId, ServerStatus, DashboardStats, AnalysisResult} from './types.js';
 
 type Props = {
@@ -43,25 +44,25 @@ function computeStats(entries: LogEntry[]): DashboardStats {
 }
 
 function Header({entries, serverStatus}: {entries: LogEntry[]; serverStatus: ServerStatus}) {
-	const statusColor = serverStatus === 'running' ? 'green' : 'gray';
+	const statusColor = serverStatus === 'running' ? theme.primary : theme.dim;
 	const dot = serverStatus === 'running' ? '●' : '○';
 
 	return (
 		<Box flexDirection="column" marginBottom={1}>
-			<Text color="green">
-				{'┌─[api-log-tracker]─[v0.1]──────────────────────────────────┐'}
+			<Text color={theme.primary}>
+				{`┌─[api-log-tracker]─[v0.1]${theme.borderH.repeat(36)}┐`}
 			</Text>
-			<Text color="green">
-				{'│  $'}
-				<Text bold color="green">{'█'}</Text>
+			<Text color={theme.primary}>
+				{`${theme.borderV}  ${theme.cursor}`}
+				<Text bold color={theme.primary}>{theme.filled}</Text>
 				{'  '}
-				<Text color="gray">{String(entries.length).padStart(4)} entries</Text>
+				<Text color={theme.dim}>{String(entries.length).padStart(4)} entries</Text>
 				{'  '}
 				<Text color={statusColor}>{dot} {serverStatus === 'running' ? 'ONLINE' : 'OFFLINE'}</Text>
 				{'                                │'}
 			</Text>
-			<Text color="green">
-				{'└────────────────────────────────────────────────────────────┘'}
+			<Text color={theme.primary}>
+				{`└${theme.borderH.repeat(56)}┘`}
 			</Text>
 		</Box>
 	);
@@ -70,15 +71,17 @@ function Header({entries, serverStatus}: {entries: LogEntry[]; serverStatus: Ser
 function Footer() {
 	return (
 		<Box marginTop={1} gap={1}>
-			<Text color="green">{'█ '}</Text>
-			<Text color="gray">{`1-5`}</Text>
-			<Text color="green">{' switch'}</Text>
-			<Text color="gray">{' │ '}</Text>
-			<Text color="gray">{`q`}</Text>
-			<Text color="green">{' quit'}</Text>
+			<Text color={theme.primary}>{theme.filled} </Text>
+			<Text color={theme.dim}>{`1-5`}</Text>
+			<Text color={theme.primary}>{' switch'}</Text>
+			<Text color={theme.dim}>{' │ '}</Text>
+			<Text color={theme.dim}>{`q`}</Text>
+			<Text color={theme.primary}>{' quit'}</Text>
 		</Box>
 	);
 }
+
+const MAX_ENTRIES = 100_000;
 
 export default function App({csvPath}: Props) {
 	const {exit} = useApp();
@@ -90,10 +93,16 @@ export default function App({csvPath}: Props) {
 	useEffect(() => {
 		const watcher = createCsvWatcher(csvPath, {
 			onEntry(entry) {
-				setEntries(prev => [...prev, entry]);
+				setEntries(prev => {
+					const next = [...prev, entry];
+					return next.length > MAX_ENTRIES ? next.slice(-MAX_ENTRIES) : next;
+				});
 			},
 			onBatch(batch) {
-				setEntries(prev => [...prev, ...batch]);
+				setEntries(prev => {
+					const next = [...prev, ...batch];
+					return next.length > MAX_ENTRIES ? next.slice(-MAX_ENTRIES) : next;
+				});
 			},
 		});
 
@@ -127,13 +136,12 @@ export default function App({csvPath}: Props) {
 			<Box flexDirection="column" flexGrow={1}>
 				{activeTab === 'dashboard' && <Dashboard stats={stats} />}
 				{activeTab === 'logs' && <LiveLogs entries={entries} />}
-				{activeTab === 'analysis' && (
-					<Analysis
-						result={analysisResult}
-						apiKey={process.env['ANTHROPIC_API_KEY'] || ''}
-						onResult={setAnalysisResult}
-					/>
-				)}
+			{activeTab === 'analysis' && (
+				<Analysis
+					result={analysisResult}
+					onResult={setAnalysisResult}
+				/>
+			)}
 				{activeTab === 'controls' && <ServerControls serverStatus={serverStatus} onStatusChange={setServerStatus} />}
 				{activeTab === 'integration' && <Integration />}
 			</Box>

@@ -19,6 +19,7 @@ pub struct LogEntry {
 }
 
 impl LogEntry {
+    #[allow(clippy::too_many_arguments)]
     pub fn new(
         source: &str,
         method: &str,
@@ -41,5 +42,48 @@ impl LogEntry {
             response_size,
             error,
         }
+    }
+}
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+
+    #[test]
+    fn new_entry_has_uuid_and_timestamp() {
+        let entry = LogEntry::new("server", "GET", "/api/test", 200, 45, 10, 200, None);
+        assert!(!entry.id.is_empty());
+        assert!(!entry.timestamp.is_empty());
+        assert_eq!(entry.source, "server");
+        assert_eq!(entry.method, "GET");
+        assert_eq!(entry.endpoint, "/api/test");
+        assert_eq!(entry.status_code, 200);
+        assert_eq!(entry.latency_ms, 45);
+        assert_eq!(entry.request_size, 10);
+        assert_eq!(entry.response_size, 200);
+        assert!(entry.error.is_none());
+    }
+
+    #[test]
+    fn new_entry_with_error() {
+        let entry = LogEntry::new(
+            "client",
+            "POST",
+            "/api/data",
+            500,
+            1200,
+            50,
+            0,
+            Some("timeout".into()),
+        );
+        assert_eq!(entry.error.as_deref(), Some("timeout"));
+        assert_eq!(entry.status_code, 500);
+    }
+
+    #[test]
+    fn new_entries_have_unique_ids() {
+        let a = LogEntry::new("server", "GET", "/", 200, 10, 0, 0, None);
+        let b = LogEntry::new("server", "GET", "/", 200, 10, 0, 0, None);
+        assert_ne!(a.id, b.id);
     }
 }
