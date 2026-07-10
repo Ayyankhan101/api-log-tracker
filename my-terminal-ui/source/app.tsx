@@ -50,7 +50,7 @@ function Header({entries, serverStatus}: {entries: LogEntry[]; serverStatus: Ser
 	return (
 		<Box flexDirection="column" marginBottom={1}>
 			<Text color={theme.primary}>
-				{`┌─[api-log-tracker]─[v0.1.2]${theme.borderH.repeat(34)}┐`}
+				{`┌─[api-log-tracker]─[v0.1.4]${theme.borderH.repeat(34)}┐`}
 			</Text>
 			<Text color={theme.primary}>
 				{`${theme.borderV}  ${theme.cursor}`}

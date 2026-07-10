@@ -7,6 +7,23 @@ and this project adheres to [Semantic Versioning](https://semver.org/spec/v2.0.0
 
 ## [Unreleased]
 
+## [0.1.4] - 2026-07-09
+
+### Added
+- `api_log_tracker tui` command — launches the TUI dashboard from the Rust binary (tries `npx`, falls back to local `my-terminal-ui/dist/cli.js`)
+- `api_log_tracker completions <shell>` — generates shell completions for bash, zsh, fish, powershell, elvish
+- `--csv <path>` flag on all subcommands (`serve`, `daemon`, `analyze`, `tui`, `demo-client`)
+- `--port <port>` flag on `serve` command (was hardcoded to :3000)
+- `--port <port>` flag on `daemon` command (replaces positional arg for consistency)
+- Environment variable support for all flags (`API_LOGGER_PORT`, `API_LOGGER_CSV`, `LLM_PROVIDER`, `LLM_MODEL`)
+- `clap` derive-based argument parser with auto-generated help and `--version`
+- Subcommand-specific `--help` output
+
+### Changed
+- Migrated CLI from manual `env::args()` parsing to `clap` derive macros
+- `daemon` now uses `--port` flag instead of positional argument
+- Version bumped from 0.1.3 to 0.1.4
+
 ## [0.1.3] - 2026-07-09
 
 ### Added
