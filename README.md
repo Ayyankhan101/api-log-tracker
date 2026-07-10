@@ -4,6 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/api_log_tracker)](https://crates.io/crates/api_log_tracker)
 [![npm](https://img.shields.io/npm/v/api-log-tracker-tui)](https://www.npmjs.com/package/api-log-tracker-tui)
 [![Release](https://img.shields.io/github/v/release/Ayyankhan101/api-log-tracker)](https://github.com/Ayyankhan101/api-log-tracker/releases)
+[![Tests](https://img.shields.io/badge/tests-101-passing.svg)](https://github.com/Ayyankhan101/api-log-tracker/actions)
 
 Real-time API traffic logging + multi-provider LLM analysis + TUI dashboard + webhook reporting.
 
@@ -149,7 +150,7 @@ Optional: `LLM_MODEL=gpt-4o` to override default model.
 ## Webhook Reporting
 
 ```bash
-cargo run -- daemon 8080 --webhook https://hooks.slack.com/...
+cargo run -- daemon --port 8080 --webhook https://hooks.slack.com/...
 ```
 
 Triggers when error rate exceeds 5% (configurable via `WEBHOOK_THRESHOLD`). Posts structured JSON with anomalies, latency hotspots, and recommendations.
