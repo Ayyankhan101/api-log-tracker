@@ -33,3 +33,16 @@ test('highlights different active tab', () => {
 	const frame = lastFrame();
 	expect(frame).toContain('5:Integrate');
 });
+
+test('highlights each tab when active', () => {
+	const dash = render(<Tabs active="dashboard" />);
+	expect(dash.lastFrame()).toContain('1:Dashboard');
+	const logs = render(<Tabs active="logs" />);
+	expect(logs.lastFrame()).toContain('2:Live Logs');
+	const analysis = render(<Tabs active="analysis" />);
+	expect(analysis.lastFrame()).toContain('3:Analysis');
+	const ctrl = render(<Tabs active="controls" />);
+	expect(ctrl.lastFrame()).toContain('4:Controls');
+	const integ = render(<Tabs active="integration" />);
+	expect(integ.lastFrame()).toContain('5:Integrate');
+});

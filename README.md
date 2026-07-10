@@ -4,6 +4,7 @@
 [![Crates.io](https://img.shields.io/crates/v/api_log_tracker)](https://crates.io/crates/api_log_tracker)
 [![npm](https://img.shields.io/npm/v/api-log-tracker-tui)](https://www.npmjs.com/package/api-log-tracker-tui)
 [![Release](https://img.shields.io/github/v/release/Ayyankhan101/api-log-tracker)](https://github.com/Ayyankhan101/api-log-tracker/releases)
+[![Tests](https://img.shields.io/badge/tests-101-passing.svg)](https://github.com/Ayyankhan101/api-log-tracker/actions)
 
 Real-time API traffic logging + multi-provider LLM analysis + TUI dashboard + webhook reporting.
 
@@ -13,22 +14,29 @@ Real-time API traffic logging + multi-provider LLM analysis + TUI dashboard + we
 # Build
 cargo build --release
 
-# Serve (axum with logging middleware)
+# Serve (axum with logging middleware on :3000)
 cargo run -- serve
+cargo run -- serve --port 4000 --csv ./custom.csv
 
 # Demo client (generates test log entries)
 cargo run -- demo-client
 
 # Daemon (HTTP API — integrate from any language)
-cargo run -- daemon [port]
+cargo run -- daemon
+cargo run -- daemon --port 9000 --webhook https://hooks.slack.com/...
 
-# TUI dashboard
-./tui
+# TUI dashboard (requires Node.js)
+cargo run -- tui
+cargo run -- tui --csv ./custom.csv
 
 # Analysis (requires LLM_PROVIDER + API key)
 export LLM_PROVIDER=openai
 export OPENAI_API_KEY=sk-...
 cargo run -- analyze
+
+# Shell completions
+cargo run -- completions bash >> ~/.bashrc
+cargo run -- completions zsh >> ~/.zshrc
 ```
 
 ## Daemon Endpoints
@@ -82,22 +90,41 @@ Returns:
 ## CLI
 
 ```
-Usage: api_log_tracker <command> [options]
+Usage: api_log_tracker [COMMAND]
 
 Commands:
-  serve                   Start axum server on :3000
-  demo-client             Generate test log entries
-  analyze [options]       Run LLM analysis
-  daemon [port]           Start HTTP daemon (default 8080)
+  serve        Start axum server on :3000 with logging middleware
+  demo-client  Make example calls through LoggedClient
+  analyze      Run LLM analysis on log entries
+  daemon       Start HTTP daemon (default port 8080)
+  tui          Launch the TUI dashboard (requires Node.js)
+  completions  Generate shell completions
+  help         Print this message or the help of the given subcommand(s)
 
-analyze options:
-  --provider <name>       Force a provider
-  --model <name>          Override default model
-
-daemon options:
-  [port]                  Port (default 8080)
-  --webhook <url>         Webhook for anomaly reports
+Options:
+  -h, --help         Print help
+  -V, --version      Print version
 ```
+
+Global flags (work on all subcommands):
+
+| Flag | Env Var | Default | Description |
+|---|---|---|---|
+| `--csv <path>` | `API_LOGGER_CSV` | `logs/api_logs.csv` | CSV log path |
+| `--port <port>` | `API_LOGGER_PORT` | varies | Listen port (serve: 3000, daemon: 8080) |
+
+Analyze-specific:
+
+| Flag | Env Var | Description |
+|---|---|---|
+| `--provider <name>` | `LLM_PROVIDER` | Force a provider |
+| `--model <name>` | `LLM_MODEL` | Override default model |
+
+Daemon-specific:
+
+| Flag | Description |
+|---|---|
+| `--webhook <url>` | Webhook URL for anomaly reports |
 
 ## LLM Providers (13)
 
@@ -123,7 +150,7 @@ Optional: `LLM_MODEL=gpt-4o` to override default model.
 ## Webhook Reporting
 
 ```bash
-cargo run -- daemon 8080 --webhook https://hooks.slack.com/...
+cargo run -- daemon --port 8080 --webhook https://hooks.slack.com/...
 ```
 
 Triggers when error rate exceeds 5% (configurable via `WEBHOOK_THRESHOLD`). Posts structured JSON with anomalies, latency hotspots, and recommendations.
@@ -181,8 +208,15 @@ LLM analysis results are cached for 60s (keyed by SHA256 of stats). Prevents red
 ## TUI Dashboard
 
 ```bash
-cd my-terminal-ui && npm run build && node dist/cli.js
-# or: ./tui
+# From Rust binary
+cargo run -- tui
+
+# Or install the npm package globally
+npm install -g api-log-tracker-tui
+api-log-tui
+
+# Or from a repo clone
+cd my-terminal-ui && npm install && npm run build && node dist/cli.js
 ```
 
 Tabs:

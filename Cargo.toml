@@ -1,6 +1,6 @@
 [package]
 name = "api_log_tracker"
-version = "0.1.3"
+version = "0.1.4"
 edition = "2021"
 description = "API log tracker with multi-provider LLM anomaly analysis, HTTP daemon, and TUI dashboard"
 license = "MIT"
@@ -31,3 +31,5 @@ csv = "1.3"
 chrono = "0.4"
 uuid = { version = "1", features = ["v4"] }
 anyhow = "1"
+clap = { version = "4", features = ["derive", "env"] }
+clap_complete = "4"

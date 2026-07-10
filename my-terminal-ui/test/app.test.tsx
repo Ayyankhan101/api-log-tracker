@@ -12,17 +12,36 @@ test('renders version string', () => {
 	expect(lastFrame()).toContain('v0.1');
 });
 
-test('renders footer with key hints', () => {
+test('shows zero entries initially', () => {
 	const {lastFrame} = render(<App csvPath="test.csv" />);
-	const frame = lastFrame();
-	expect(frame).toContain('switch');
-	expect(frame).toContain('quit');
+	expect(lastFrame()).toContain('0 entries');
 });
 
-test('renders tab bar', () => {
+test('shows zero entries initially', () => {
+	const {lastFrame} = render(<App csvPath="test.csv" />);
+	expect(lastFrame()).toContain('0 entries');
+});
+
+test('shows OFFLINE status', () => {
+	const {lastFrame} = render(<App csvPath="test.csv" />);
+	expect(lastFrame()).toContain('OFFLINE');
+});
+
+test('renders all tab labels', () => {
 	const {lastFrame} = render(<App csvPath="test.csv" />);
 	const frame = lastFrame();
 	expect(frame).toContain('Dashboard');
+	expect(frame).toContain('Live Logs');
 	expect(frame).toContain('Analysis');
+	expect(frame).toContain('Controls');
 	expect(frame).toContain('Integrate');
+});
+
+test('renders footer with keyboard shortcuts', () => {
+	const {lastFrame} = render(<App csvPath="test.csv" />);
+	const frame = lastFrame();
+	expect(frame).toContain('1-5');
+	expect(frame).toContain('switch');
+	expect(frame).toContain('q');
+	expect(frame).toContain('quit');
 });
