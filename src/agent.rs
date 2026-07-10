@@ -287,4 +287,94 @@ mod tests {
         let stats = compute_stats(&[]);
         assert_eq!(stats.error_rate(), 0.0);
     }
+
+    #[test]
+    fn read_entries_returns_data_from_csv() {
+        let dir = std::env::temp_dir().join(format!("agent_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let csv = dir.join("logs.csv");
+
+        // Write CSV manually to test parsing
+        let mut wtr = csv::Writer::from_path(&csv).unwrap();
+        wtr.serialize(&make_entry("/test", 200, 50, None)).unwrap();
+        wtr.flush().unwrap();
+
+        let entries = read_entries(&csv).unwrap();
+        assert_eq!(entries.len(), 1);
+        assert_eq!(entries[0].endpoint, "/test");
+        assert_eq!(entries[0].status_code, 200);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn read_entries_returns_empty_for_missing_file() {
+        let csv = Path::new("/tmp/nonexistent_logs_xyz.csv");
+        let result = read_entries(csv);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn get_stats_returns_correct_stats() {
+        let dir = std::env::temp_dir().join(format!("agent_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let csv = dir.join("logs.csv");
+
+        let mut wtr = csv::Writer::from_path(&csv).unwrap();
+        for _ in 0..5 {
+            wtr.serialize(&make_entry("/a", 200, 100, None)).unwrap();
+        }
+        wtr.serialize(&make_entry("/b", 500, 300, Some("err")))
+            .unwrap();
+        wtr.flush().unwrap();
+
+        let stats = get_stats(&csv).unwrap();
+        assert_eq!(stats.total, 6);
+        assert_eq!(stats.errors, 1);
+        assert_eq!(stats.max_latency_ms, 300);
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn get_stats_returns_zero_for_missing_file() {
+        let csv = Path::new("/tmp/nonexistent_stats_xyz.csv");
+        let result = get_stats(csv);
+        assert!(result.is_err());
+    }
+
+    #[test]
+    fn build_prompt_contains_summary_fields() {
+        let entries = vec![
+            make_entry("/users", 200, 100, None),
+            make_entry("/users", 200, 150, None),
+            make_entry("/admin", 500, 5000, Some("internal error")),
+        ];
+        let stats = compute_stats(&entries);
+        let prompt = build_prompt(&stats);
+
+        assert!(prompt.contains("total_requests"));
+        assert!(prompt.contains("error_count"));
+        assert!(prompt.contains("error_rate_pct"));
+        assert!(prompt.contains("avg_latency_ms"));
+        assert!(prompt.contains("max_latency_ms"));
+        assert!(prompt.contains("/users"));
+        assert!(prompt.contains("/admin"));
+    }
+
+    #[test]
+    fn stats_hash_is_deterministic() {
+        let entries = vec![make_entry("/a", 200, 100, None)];
+        let stats = compute_stats(&entries);
+        let h1 = stats_hash(&stats);
+        let h2 = stats_hash(&stats);
+        assert_eq!(h1, h2);
+    }
+
+    #[test]
+    fn stats_hash_differs_for_different_stats() {
+        let e1 = vec![make_entry("/a", 200, 100, None)];
+        let e2 = vec![make_entry("/b", 404, 200, Some("not found"))];
+        let s1 = compute_stats(&e1);
+        let s2 = compute_stats(&e2);
+        assert_ne!(stats_hash(&s1), stats_hash(&s2));
+    }
 }

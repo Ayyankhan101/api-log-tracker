@@ -126,7 +126,11 @@ async fn main() -> anyhow::Result<()> {
     }) {
         Commands::Serve { port, csv } => run_server(port, csv).await?,
         Commands::DemoClient { csv } => run_demo_client(csv).await?,
-        Commands::Analyze { csv, provider, model } => run_analysis(csv, provider, model).await?,
+        Commands::Analyze {
+            csv,
+            provider,
+            model,
+        } => run_analysis(csv, provider, model).await?,
         Commands::Daemon { port, csv, webhook } => run_daemon(port, csv, webhook).await?,
         Commands::Tui { csv } => run_tui(csv)?,
         Commands::Completions { shell } => run_completions(shell)?,

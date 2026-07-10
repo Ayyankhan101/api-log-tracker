@@ -56,3 +56,35 @@ test('renders zero state', () => {
 	const {lastFrame} = render(<Dashboard stats={makeStats({total: 0, errors: 0, errorRate: 0, avgLatency: 0, maxLatency: 0, statusCodes: {}, endpoints: {}, requestsPerMinute: []})} />);
 	expect(lastFrame()).toContain('0');
 });
+
+test('renders error count', () => {
+	const {lastFrame} = render(<Dashboard stats={makeStats({errors: 7})} />);
+	expect(lastFrame()).toContain('7');
+});
+
+test('renders top endpoints with counts', () => {
+	const {lastFrame} = render(<Dashboard stats={makeStats({endpoints: {'/api/users': 25, '/api/data': 17, '/api/admin': 5}})} />);
+	const frame = lastFrame();
+	expect(frame).toContain('/api/users');
+	expect(frame).toContain('/api/data');
+	expect(frame).toContain('/api/admin');
+});
+
+test('renders status code breakdown', () => {
+	const {lastFrame} = render(<Dashboard stats={makeStats({statusCodes: {200: 30, 404: 5, 500: 7}})} />);
+	expect(lastFrame()).toContain('200');
+	expect(lastFrame()).toContain('404');
+	expect(lastFrame()).toContain('500');
+});
+
+test('renders sparkline bars', () => {
+	const {lastFrame} = render(<Dashboard stats={makeStats({requestsPerMinute: [0, 1, 2, 3, 4, 5]})} />);
+	const frame = lastFrame();
+	expect(frame).toContain('REQUESTS/MIN');
+});
+
+test('renders large max latency', () => {
+	const {lastFrame} = render(<Dashboard stats={makeStats({maxLatency: 12345})} />);
+	const frame = lastFrame();
+	expect(frame).toContain('12,345');
+});

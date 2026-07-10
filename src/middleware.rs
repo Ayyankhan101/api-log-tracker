@@ -68,3 +68,97 @@ pub async fn log_requests(
 
     response
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use axum::{
+        body::Body,
+        http::{Request, StatusCode},
+        middleware,
+        routing::get,
+        Router,
+    };
+    use std::sync::Once;
+    use tower::ServiceExt;
+
+    static INIT: Once = Once::new();
+    fn init_tracing() {
+        INIT.call_once(|| {
+            let _ = tracing_subscriber::fmt()
+                .with_env_filter(tracing_subscriber::EnvFilter::new("off"))
+                .try_init();
+        });
+    }
+
+    #[tokio::test]
+    async fn log_requests_writes_entry_for_ok_response() {
+        init_tracing();
+        let dir = std::env::temp_dir().join(format!("middleware_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let csv = dir.join("logs.csv");
+        let csv_str = csv.to_string_lossy().to_string();
+        let logger = ApiLogger::new(&csv_str);
+
+        let app = Router::new()
+            .route("/health", get(|| async { "healthy" }))
+            .layer(middleware::from_fn_with_state(logger.clone(), log_requests))
+            .with_state(logger);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/health")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::OK);
+
+        // Give the spawned task time to finish
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let content = std::fs::read_to_string(&csv).unwrap();
+        assert!(content.contains("GET"));
+        assert!(content.contains("/health"));
+        assert!(content.contains("200"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn log_requests_captures_error_status() {
+        init_tracing();
+        let dir = std::env::temp_dir().join(format!("middleware_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let csv = dir.join("logs.csv");
+        let csv_str = csv.to_string_lossy().to_string();
+        let logger = ApiLogger::new(&csv_str);
+
+        let app = Router::new()
+            .route(
+                "/error",
+                get(|| async { (StatusCode::INTERNAL_SERVER_ERROR, "fail") }),
+            )
+            .layer(middleware::from_fn_with_state(logger.clone(), log_requests))
+            .with_state(logger);
+
+        let response = app
+            .oneshot(
+                Request::builder()
+                    .uri("/error")
+                    .body(Body::empty())
+                    .unwrap(),
+            )
+            .await
+            .unwrap();
+
+        assert_eq!(response.status(), StatusCode::INTERNAL_SERVER_ERROR);
+
+        tokio::time::sleep(std::time::Duration::from_millis(100)).await;
+        let content = std::fs::read_to_string(&csv).unwrap();
+        assert!(content.contains("500"));
+        assert!(content.contains("HTTP 500"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+}

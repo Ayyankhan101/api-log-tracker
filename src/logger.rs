@@ -52,3 +52,94 @@ impl ApiLogger {
         &self.path
     }
 }
+
+#[cfg(test)]
+mod tests {
+    use super::*;
+    use crate::models::LogEntry;
+
+    fn make_entry() -> LogEntry {
+        LogEntry::new("test", "GET", "/api/test", 200, 42, 10, 200, None)
+    }
+
+    #[tokio::test]
+    async fn new_logger_creates_parent_directory() {
+        let dir = std::env::temp_dir().join(format!("api_logger_test_{}", uuid::Uuid::new_v4()));
+        let csv = dir.join("sub/logs.csv");
+        let logger = ApiLogger::new(&csv);
+        logger.log(&make_entry()).await.unwrap();
+        assert!(csv.exists());
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn log_writes_entry_to_csv() {
+        let dir = std::env::temp_dir().join(format!("api_logger_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let csv = dir.join("logs.csv");
+        let logger = ApiLogger::new(&csv);
+        logger.log(&make_entry()).await.unwrap();
+
+        let content = std::fs::read_to_string(&csv).unwrap();
+        assert!(content.contains("/api/test"));
+        assert!(content.contains("GET"));
+        assert!(content.contains("200"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn log_appends_multiple_entries() {
+        let dir = std::env::temp_dir().join(format!("api_logger_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let csv = dir.join("logs.csv");
+        let logger = ApiLogger::new(&csv);
+
+        logger.log(&make_entry()).await.unwrap();
+        logger.log(&make_entry()).await.unwrap();
+        logger.log(&make_entry()).await.unwrap();
+
+        let content = std::fs::read_to_string(&csv).unwrap();
+        assert_eq!(content.lines().count(), 4); // header + 3 entries
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[tokio::test]
+    async fn log_handles_error_entry() {
+        let dir = std::env::temp_dir().join(format!("api_logger_test_{}", uuid::Uuid::new_v4()));
+        std::fs::create_dir_all(&dir).unwrap();
+        let csv = dir.join("logs.csv");
+        let logger = ApiLogger::new(&csv);
+
+        let err_entry = LogEntry::new(
+            "test",
+            "POST",
+            "/api/fail",
+            500,
+            999,
+            10,
+            0,
+            Some("timeout".into()),
+        );
+        logger.log(&err_entry).await.unwrap();
+
+        let content = std::fs::read_to_string(&csv).unwrap();
+        assert!(content.contains("500"));
+        assert!(content.contains("timeout"));
+        let _ = std::fs::remove_dir_all(&dir);
+    }
+
+    #[test]
+    fn path_returns_configured_path() {
+        let logger = ApiLogger::new("some/path.csv");
+        assert_eq!(logger.path().to_string_lossy(), "some/path.csv");
+    }
+
+    #[test]
+    fn new_logger_does_not_create_file_immediately() {
+        let dir = std::env::temp_dir().join(format!("api_logger_test_{}", uuid::Uuid::new_v4()));
+        let csv = dir.join("nosuch.csv");
+        let logger = ApiLogger::new(&csv);
+        assert_eq!(logger.path().to_string_lossy(), csv.to_string_lossy());
+        assert!(!csv.exists());
+    }
+}
